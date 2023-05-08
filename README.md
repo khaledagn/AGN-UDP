@@ -13,7 +13,7 @@ THIS IS A SCRIPT FOR AUTO INSTALLATION OF UDP (HYSTERIA SERVER)
 
 # Installation
 ```
-wget https://github.com/khaledagn/DNS-AGN/raw/main/install_agnudp.sh; chmod +x install_agnudp.sh; ./install_agnudp.sh
+wget https://github.com/khaledagn/AGN-UDP/raw/main/install_agnudp.sh; chmod +x install_agnudp.sh; ./install_agnudp.sh
 
 ```
 
