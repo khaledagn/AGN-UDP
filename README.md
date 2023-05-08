@@ -18,7 +18,7 @@ wget https://github.com/khaledagn/AGN-UDP/raw/main/install_agnudp.sh; chmod +x i
 ```
 
 
-## :octocat: Translated and Modded by KHALED AGN
+## :octocat: by KHALED AGN
 <ul>
  <li>TELEGRAM CHANNEL: https://t.me/khaledagn</li>
  <li>FACEBOOK: https://www.facebook.com/khaledagn.me</li>
