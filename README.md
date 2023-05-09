@@ -12,7 +12,7 @@ THIS IS A SCRIPT FOR AUTO INSTALLATION OF UDP (HYSTERIA SERVER)
 
 
 # Installation
---------------Install UDP on your server------------
+
 
 // Download the script
 ```
