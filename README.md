@@ -12,11 +12,20 @@ THIS IS A SCRIPT FOR AUTO INSTALLATION OF UDP (HYSTERIA SERVER)
 
 
 # Installation
-```
-wget https://github.com/khaledagn/AGN-UDP/raw/main/install_agnudp.sh; chmod +x install_agnudp.sh; ./install_agnudp.sh
+--------------Install UDP on your server------------
 
-```
-
+// Download the script
+...
+wget https://github.com/khaledagn/AGN-UDP/raw/main/install_agnudp.sh
+...
+// Edit script configuration 
+...
+nano install_agnudp.sh
+...
+// Install the script
+...
+chmod +x install_agnudp.sh; ./install_agnudp.sh
+...
 
 ## :octocat: by KHALED AGN
 <ul>
