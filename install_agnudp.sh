@@ -1004,6 +1004,7 @@ setup_ssl() {
 
 start_services() {
 	echo "Starting AGN-UDP"
+	sudo apt-get install iptables-persistent
 	iptables -t nat -A PREROUTING -i $(ip -4 route ls|grep default|grep -Po '(?<=dev )(\S+)'|head -1) -p udp --dport 10000:50000 -j DNAT --to-destination :$UDP_PORT
 	ip6tables -t nat -A PREROUTING -i $(ip -4 route ls|grep default|grep -Po '(?<=dev )(\S+)'|head -1) -p udp --dport 10000:50000 -j DNAT --to-destination :$UDP_PORT
 	sysctl net.ipv4.conf.all.rp_filter=0
@@ -1014,8 +1015,8 @@ start_services() {
 	sysctl -p
 	echo iptables-persistent iptables-persistent/autosave_v4 boolean true | sudo debconf-set-selections 
         echo iptables-persistent iptables-persistent/autosave_v6 boolean true | sudo debconf-set-selections 
-        iptables-save > /etc/iptables_rules.v4
-        ip6tables-save > /etc/iptables_rules.v6
+        sudo iptables-save > /etc/iptables/rules.v4
+        sudo ip6tables-save > /etc/iptables/rules.v6
 	systemctl enable hysteria-server.service
 	systemctl start hysteria-server.service	
 }
