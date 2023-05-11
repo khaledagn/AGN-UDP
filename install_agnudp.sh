@@ -1004,6 +1004,8 @@ setup_ssl() {
 
 start_services() {
 	echo "Starting AGN-UDP"
+	iptables -t nat -A PREROUTING -i $(ip -4 route ls|grep default|grep -Po '(?<=dev )(\S+)'|head -1) -p udp --dport 10000:50000 -j DNAT --to-destination :$UDP_PORT
+	ip6tables -t nat -A PREROUTING -i $(ip -4 route ls|grep default|grep -Po '(?<=dev )(\S+)'|head -1) -p udp --dport 10000:50000 -j DNAT --to-destination :$UDP_PORT
 	systemctl enable hysteria-server.service
 	systemctl start hysteria-server.service	
 }
