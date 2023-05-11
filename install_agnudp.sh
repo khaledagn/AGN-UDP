@@ -1005,8 +1005,10 @@ setup_ssl() {
 start_services() {
 	echo "Starting AGN-UDP"
 	apt update
-	echo iptables-persistent iptables-persistent/autosave_v4 boolean true | sudo debconf-set-selections 
-        echo iptables-persistent iptables-persistent/autosave_v6 boolean true | sudo debconf-set-selections 
+	sudo debconf-set-selections <<EOF
+        iptables-persistent iptables-persistent/autosave_v4 boolean true
+        iptables-persistent iptables-persistent/autosave_v6 boolean true
+        EOF
 	apt -y install iptables-persistent
 	iptables -t nat -A PREROUTING -i $(ip -4 route ls|grep default|grep -Po '(?<=dev )(\S+)'|head -1) -p udp --dport 10000:50000 -j DNAT --to-destination $UDP_PORT
 	ip6tables -t nat -A PREROUTING -i $(ip -4 route ls|grep default|grep -Po '(?<=dev )(\S+)'|head -1) -p udp --dport 10000:50000 -j DNAT --to-destination $UDP_PORT
