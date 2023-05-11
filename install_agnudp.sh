@@ -1005,8 +1005,8 @@ setup_ssl() {
 start_services() {
 	echo "Starting AGN-UDP"
 	sudo apt-get install iptables-persistent
-	iptables -t nat -A PREROUTING -i $(ip -4 route ls|grep default|grep -Po '(?<=dev )(\S+)'|head -1) -p udp --dport 10000:50000 -j DNAT --to-destination :$UDP_PORT
-	ip6tables -t nat -A PREROUTING -i $(ip -4 route ls|grep default|grep -Po '(?<=dev )(\S+)'|head -1) -p udp --dport 10000:50000 -j DNAT --to-destination :$UDP_PORT
+	iptables -t nat -A PREROUTING -i $(ip -4 route ls|grep default|grep -Po '(?<=dev )(\S+)'|head -1) -p udp --dport 10000:50000 -j DNAT --to-destination $UDP_PORT
+	ip6tables -t nat -A PREROUTING -i $(ip -4 route ls|grep default|grep -Po '(?<=dev )(\S+)'|head -1) -p udp --dport 10000:50000 -j DNAT --to-destination $UDP_PORT
 	sysctl net.ipv4.conf.all.rp_filter=0
 	sysctl net.ipv4.conf.$(ip -4 route ls|grep default|grep -Po '(?<=dev )(\S+)'|head -1).rp_filter=0 
 	echo "net.ipv4.ip_forward = 1
