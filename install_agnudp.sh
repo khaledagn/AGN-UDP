@@ -737,92 +737,103 @@ stop_running_services() {
 }
 
 
-###
+ ###
 # HYSTERIA & GITHUB API
 ###
 
 is_hysteria_installed() {
-	# RETURN VALUE
-	# 0: hysteria is installed
-	# 1: hysteria is not installed
-	
-	if [[ -f "$EXECUTABLE_INSTALL_PATH" || -h "$EXECUTABLE_INSTALL_PATH" ]]; then
-		return 0
-		fi
-		return 1
+  # RETURN VALUE
+  # 0: hysteria is installed
+  # 1: hysteria is not installed
+
+  if [[ -f "$EXECUTABLE_INSTALL_PATH" || -h "$EXECUTABLE_INSTALL_PATH" ]]; then
+    return 0
+  fi
+  return 1
+}
+
+is_hysteria1_version() {
+  local _version="$1"
+
+  has_prefix "$_version" "v1." || has_prefix "$_version" "v0."
 }
 
 get_installed_version() {
-	if is_hysteria_installed; then
-		"$EXECUTABLE_INSTALL_PATH" -v | cut -d ' ' -f 3
-		fi
+  if is_hysteria_installed; then
+    if "$EXECUTABLE_INSTALL_PATH" version > /dev/null 2>&1; then
+      "$EXECUTABLE_INSTALL_PATH" version | grep Version | grep -o 'v[.0-9]*'
+    elif "$EXECUTABLE_INSTALL_PATH" -v > /dev/null 2>&1; then
+      # hysteria 1
+      "$EXECUTABLE_INSTALL_PATH" -v | cut -d ' ' -f 3
+    fi
+  fi
 }
 
 get_latest_version() {
-	if [[ -n "$VERSION" ]]; then
-		echo "$VERSION"
-		return
-		fi
-		
-		local _tmpfile=$(mktemp)
-		if ! curl -sS -H 'Accept: application/vnd.github.v3+json' "$API_BASE_URL/releases/latest" -o "$_tmpfile"; then
-			error "Failed to get latest release, please check your network."
-			exit 11
-			fi
-			
-			local _latest_version=$(grep 'tag_name' "$_tmpfile" | head -1 | grep -o '"v.*"')
-			_latest_version=${_latest_version#'"'}
-			_latest_version=${_latest_version%'"'}
-			
-			if [[ -n "$_latest_version" ]]; then
-				echo "$_latest_version"
-				fi
-				
-				rm -f "$_tmpfile"
+  if [[ -n "$VERSION" ]]; then
+    echo "$VERSION"
+    return
+  fi
+
+  local _tmpfile=$(mktemp)
+  if ! curl -sS -H 'Accept: application/vnd.github.v3+json' "$API_BASE_URL/releases/latest" -o "$_tmpfile"; then
+    error "Failed to get the latest version from GitHub API, please check your network and try again."
+    exit 11
+  fi
+
+  local _latest_version=$(grep 'tag_name' "$_tmpfile" | head -1 | grep -o '"app/v.*"')
+  _latest_version=${_latest_version#'"app/'}
+  _latest_version=${_latest_version%'"'}
+
+  if [[ -n "$_latest_version" ]]; then
+    echo "$_latest_version"
+  fi
+
+  rm -f "$_tmpfile"
 }
 
 download_hysteria() {
-	local _version="$1"
-	local _destination="$2"
-	
-	local _download_url="$REPO_URL/releases/download/$_version/hysteria-$OPERATING_SYSTEM-$ARCHITECTURE"
-	echo "Downloading hysteria archive: $_download_url ..."
-	if ! curl -R -H 'Cache-Control: no-cache' "$_download_url" -o "$_destination"; then
-		error "Download failed! Please check your network and try again."
-		return 11
-		fi
-		return 0
+  local _version="$1"
+  local _destination="$2"
+
+  local _download_url="$REPO_URL/releases/download/app/$_version/hysteria-$OPERATING_SYSTEM-$ARCHITECTURE"
+  echo "Downloading hysteria binary: $_download_url ..."
+  if ! curl -R -H 'Cache-Control: no-cache' "$_download_url" -o "$_destination"; then
+    error "Download failed, please check your network and try again."
+    return 11
+  fi
+  return 0
 }
 
 check_update() {
-	# RETURN VALUE
-	# 0: update available
-	# 1: installed version is latest
-	
-	echo -ne "Checking for installed version ... "
-	local _installed_version="$(get_installed_version)"
-	if [[ -n "$_installed_version" ]]; then
-		echo "$_installed_version"
-		else
-			echo "not installed"
-			fi
-			
-			echo -ne "Checking for latest version ... "
-			local _latest_version="$(get_latest_version)"
-			if [[ -n "$_latest_version" ]]; then
-				echo "$_latest_version"
-				VERSION="$_latest_version"
-				else
-					echo "failed"
-					return 1
-					fi
-					
-					local _vercmp="$(vercmp "$_installed_version" "$_latest_version")"
-					if [[ "$_vercmp" -lt 0 ]]; then
-						return 0
-						fi
-						
-						return 1
+  # RETURN VALUE
+  # 0: update available
+  # 1: installed version is latest
+
+  echo -ne "Checking for installed version ... "
+  local _installed_version="$(get_installed_version)"
+  if [[ -n "$_installed_version" ]]; then
+    echo "$_installed_version"
+  else
+    echo "not installed"
+  fi
+
+  echo -ne "Checking for latest version ... "
+  local _latest_version="$(get_latest_version)"
+  if [[ -n "$_latest_version" ]]; then
+    echo "$_latest_version"
+    VERSION="$_latest_version"
+  else
+    echo "failed"
+    return 1
+  fi
+
+  local _vercmp="$(vercmp "$_installed_version" "$_latest_version")"
+  if [[ "$_vercmp" -lt 0 ]]; then
+    return 0
+  fi
+
+  return 1
 }
 
 
