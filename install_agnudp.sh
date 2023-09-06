@@ -655,7 +655,7 @@ User=root
 Group=root
 WorkingDirectory=/etc/hysteria
 Environment="PATH=/usr/local/bin/hysteria"
-ExecStart=/usr/local/bin/hysteria -config /etc/hysteria/config.json server
+ExecStart=/usr/local/bin/hysteria server --config /etc/hysteria/config.yaml
 
 [Install]
 WantedBy=multi-user.target
@@ -672,27 +672,34 @@ tpl_hysteria_server_x_service() {
   tpl_hysteria_server_service_base '%i'
 }
 
-# /etc/hysteria/config.json
-tpl_etc_hysteria_config_json() {
+# /etc/hysteria/config.yaml
+tpl_etc_hysteria_config_yaml() {
   cat << EOF
-{
-  "listen": "$UDP_PORT",
-  "protocol": "$PROTOCOL",
-  "cert": "/etc/hysteria/hysteria.server.crt",
-  "key": "/etc/hysteria/hysteria.server.key",
-  "up": "100 Mbps",
-  "up_mbps": 100,
-  "down": "100 Mbps",
-  "down_mbps": 100,
-  "disable_udp": false,
-  "obfs": "$OBFS",
-  "auth": {
-	"mode": "passwords",
-	"config": ["$PASSWORD"]
-         }
-}
+# listen: $UDP_PORT
+ protocol: $PROTOCOL
+cert: /etc/hysteria/hysteria.server.crt
+key: /etc/hysteria/hysteria.server.key
+obfs: $OBFS
+ 
+up: 100 Mbps
+up_mbps: 100
+down: 100 Mbps
+ down_mbps: 100
+disable_udp: false
+auth:
+  type: password
+  password: $PASSWORD
+
+masquerade:
+  type: proxy
+  proxy:
+    url: https://news.ycombinator.com/
+    rewriteHost: true
 EOF
 }
+
+
+ 
 
 
 ###
