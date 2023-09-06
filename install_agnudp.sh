@@ -717,9 +717,8 @@ tpl_hysteria_server_x_service() {
 # /etc/hysteria/config.yaml
 tpl_etc_hysteria_config_yaml() {
   cat << EOF
-# listen: $UDP_PORT
- protocol: $PROTOCOL
- tls:
+  listen: $UDP_PORT
+  tls:  
   cert: /etc/hysteria/hysteria.server.crt
 
 
