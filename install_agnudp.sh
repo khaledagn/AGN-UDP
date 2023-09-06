@@ -886,9 +886,7 @@ perform_remove_hysteria_binary() {
 }
 
 perform_install_hysteria_example_config() {
-	if [[ ! -d "$CONFIG_DIR" ]]; then
-		install_content -Dm644 "$(tpl_etc_hysteria_config_json)" "$CONFIG_DIR/config.json"
-		fi
+  install_content -Dm644 "$(tpl_etc_hysteria_config_yaml)" "$CONFIG_DIR/config.yaml" ""
 }
 
 perform_install_hysteria_systemd() {
