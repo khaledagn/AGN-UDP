@@ -677,8 +677,10 @@ tpl_etc_hysteria_config_yaml() {
   cat << EOF
 # listen: $UDP_PORT
  protocol: $PROTOCOL
-cert: /etc/hysteria/hysteria.server.crt
-key: /etc/hysteria/hysteria.server.key
+acme:
+  domains:
+    - $DOMAIN
+  email: $EMAIL
 obfs: $OBFS
  
 up: 100 Mbps
