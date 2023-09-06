@@ -23,7 +23,8 @@ UDP_PORT=":36712"
 
 # OBFS
 OBFS="agnudp"
-
+# EMAIL
+EMAIL="agnkhaled@protonmail.com"
 # PASSWORDS
 PASSWORD="agnudp"
 
