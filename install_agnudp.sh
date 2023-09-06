@@ -719,26 +719,20 @@ tpl_etc_hysteria_config_yaml() {
   cat << EOF
 # listen: $UDP_PORT
  protocol: $PROTOCOL
-acme:
-  domains:
-    - $DOMAIN
-  email: $EMAIL
-obfs: $OBFS
- 
-up: 100 Mbps
-up_mbps: 100
-down: 100 Mbps
- down_mbps: 100
-disable_udp: false
+ tls:
+  cert: /etc/hysteria/hysteria.server.crt
+
+
+  key: /etc/hysteria/hysteria.server.key
+disableUDP: false
+obfs:
+  type: salamander
+  salamander:
+    password: $PASSWORD
 auth:
   type: password
   password: $PASSWORD
-
-masquerade:
-  type: proxy
-  proxy:
-    url: https://news.ycombinator.com/
-    rewriteHost: true
+ 
 EOF
 }
 
@@ -992,6 +986,7 @@ perform_install() {
   perform_install_hysteria_example_config
   perform_install_hysteria_home_legacy
   perform_install_hysteria_systemd
+  setup_ssl
   start_services
   if [[ -n "$_is_frash_install" ]]; then
     echo
@@ -1053,6 +1048,17 @@ perform_remove() {
   fi
   echo
 }
+setup_ssl() {
+	echo "Installing ssl"
+
+	openssl genrsa -out /etc/hysteria/hysteria.ca.key 2048
+
+	openssl req -new -x509 -days 3650 -key /etc/hysteria/hysteria.ca.key -subj "/C=CN/ST=GD/L=SZ/O=Hysteria, Inc./CN=Hysteria Root CA" -out /etc/hysteria/hysteria.ca.crt
+
+	openssl req -newkey rsa:2048 -nodes -keyout /etc/hysteria/hysteria.server.key -subj "/C=CN/ST=GD/L=SZ/O=Hysteria, Inc./CN=$DOMAIN" -out /etc/hysteria/hysteria.server.csr
+
+	openssl x509 -req -extfile <(printf "subjectAltName=DNS:$DOMAIN,DNS:$DOMAIN") -days 3650 -in /etc/hysteria/hysteria.server.csr -CA /etc/hysteria/hysteria.ca.crt -CAkey /etc/hysteria/hysteria.ca.key -CAcreateserial -out /etc/hysteria/hysteria.server.crt	
+ }
 start_services() {
 	echo "Starting AGN-UDP"
 	apt update
