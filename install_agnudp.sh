@@ -588,15 +588,7 @@ parse_arguments() {
 				show_argument_error_and_exit "Version numbers should begin with 'v' (such like 'v1.3.1'), got '$VERSION'"
 				fi
 				;;
-			'-c' | '--check')
-			if [[ -n "$OPERATION" && "$OPERATION" != 'check' ]]; then
-				show_argument_error_and_exit "Option '-c' or '--check' is conflicted with other option."
-				fi
-				OPERATION='check_update'
-				;;
-			'-f' | '--force')
-			FORCE='1'
-			;;
+			 
 			'-h' | '--help')
 			show_usage_and_exit
 			;;
@@ -795,37 +787,7 @@ download_hysteria() {
 		return 0
 }
 
-check_update() {
-	# RETURN VALUE
-	# 0: update available
-	# 1: installed version is latest
-	
-	echo -ne "Checking for installed version ... "
-	local _installed_version="$(get_installed_version)"
-	if [[ -n "$_installed_version" ]]; then
-		echo "$_installed_version"
-		else
-			echo "not installed"
-			fi
-			
-			echo -ne "Checking for latest version ... "
-			local _latest_version="$(get_latest_version)"
-			if [[ -n "$_latest_version" ]]; then
-				echo "$_latest_version"
-				VERSION="$_latest_version"
-				else
-					echo "failed"
-					return 1
-					fi
-					
-					local _vercmp="$(vercmp "$_installed_version" "$_latest_version")"
-					if [[ "$_vercmp" -lt 0 ]]; then
-						return 0
-						fi
-						
-						return 1
-}
-
+ 
 
 ###
 # ENTRY
@@ -906,29 +868,12 @@ perform_install() {
 		_is_frash_install=1
 		fi
 		
-		local _is_update_required
-		
-		if [[ -n "$LOCAL_FILE" ]] || [[ -n "$VERSION" ]] || check_update; then
-			_is_update_required=1
-			fi
-			
-			if [[ "x$FORCE" == "x1" ]]; then
-				if [[ -z "$_is_update_required" ]]; then
-					note "Option '--force' is specified, re-install even if installed version is the latest."
-					fi
-					_is_update_required=1
-					fi
-					
-					if [[ -z "$_is_update_required" ]]; then
-						echo "$(tgreen)Installed version is up-to-dated, there is nothing to do.$(treset)"
-						return
-						fi
-						perform_install_hysteria_binary
+ 						perform_install_hysteria_binary
 						perform_install_hysteria_example_config
 						perform_install_hysteria_home_legacy
 						perform_install_hysteria_systemd
 						setup_ssl
-					        start_services
+					    start_services
 						if [[ -n "$_is_frash_install" ]]; then
 							echo
 							echo -e "$(tbold)Congratulation! AGN-UDP has been successfully installed on your server.$(treset)"
@@ -944,7 +889,7 @@ perform_install() {
 							echo
 							else
 								restart_running_services
-								
+								start_services
 								echo
 								echo -e "$(tbold)AGN-UDP has been successfully update to $VERSION.$(treset)"
 								echo
@@ -976,19 +921,7 @@ perform_remove() {
 			echo
 }
 
-perform_check_update() {
-	if check_update; then
-		echo
-		echo -e "$(tbold)Update available: $VERSION$(treset)"
-		echo
-		echo -e "$(tgreen)You can download and install the latest version by execute this script without any arguments.$(treset)"
-		echo
-		else
-			echo
-			echo "$(tgreen)Installed version is up-to-dated.$(treset)"
-			echo
-			fi
-}
+ 
 
 
 setup_ssl() {
@@ -1025,7 +958,7 @@ start_services() {
 
 
 main() {
-	parse_arguments "$@"
+parse_arguments "$@"
 	check_permission
 	check_environment
 	check_hysteria_user "hysteria"
@@ -1037,9 +970,7 @@ main() {
 	"remove")
 	perform_remove
 	;;
-	"check_update")
-	perform_check_update
-	;;
+	 
 	*)
 	error "Unknown operation '$OPERATION'."
 	;;
