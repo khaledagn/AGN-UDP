@@ -30,7 +30,7 @@ chmod +x install_agnudp.sh; ./install_agnudp.sh
 ## :octocat: by KHALED AGN
 <ul>
  <li>TELEGRAM CHANNEL: https://t.me/khaledagn</li>
- <li>FACEBOOK: https://www.facebook.com/khaledagn.me</li>
+ <li>FACEBOOK: https://www.facebook.com/itskhaledagn</li>
  <li>INSTAGRAM: https://www.instagram.com/khaledagn</li>
  <li>TWITTER: https://www.twitter.com/khaled_agn</li>
  
