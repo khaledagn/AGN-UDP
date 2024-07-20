@@ -30,10 +30,13 @@ SYSTEMD_SERVICES_DIR="/etc/systemd/system"
 CONFIG_DIR="/etc/hysteria"
 USER_DB="$CONFIG_DIR/udpusers.db"
 REPO_URL="https://github.com/apernet/hysteria"
+CONFIG_FILE="$CONFIG_DIR/config.json"
 API_BASE_URL="https://api.github.com/repos/apernet/hysteria"
 CURL_FLAGS=(-L -f -q --retry 5 --retry-delay 10 --retry-max-time 60)
 PACKAGE_MANAGEMENT_INSTALL="${PACKAGE_MANAGEMENT_INSTALL:-}"
 SYSTEMD_SERVICE="$SYSTEMD_SERVICES_DIR/hysteria-server.service"
+mkdir -p "$CONFIG_DIR"
+touch "$USER_DB"
 
 # Other configurations
 OPERATING_SYSTEM=""
@@ -521,7 +524,12 @@ tpl_hysteria_server_x_service() {
 }
 
 tpl_etc_hysteria_config_json() {
-  local users=$(fetch_users | tr '\n' ',' | sed 's/,$//')
+    local users=$(fetch_users | tr '\n' ',' | sed 's/,$//')
+
+    
+    mkdir -p "$CONFIG_DIR"
+
+    
     cat << EOF > "$CONFIG_FILE"
 {
   "server": "vpn.khaledagn.com",
@@ -543,24 +551,55 @@ tpl_etc_hysteria_config_json() {
 EOF
 }
 
+
+
 setup_db() {
     echo "Setting up database"
-    DB_PATH="/etc/hysteria/udpusers.db"
-    if [[ ! -f "$DB_PATH" ]]; then
-        sqlite3 $DB_PATH <<EOF
+    mkdir -p "$(dirname "$USER_DB")"
+
+    if [[ ! -f "$USER_DB" ]]; then
+        # Create the database file
+        sqlite3 "$USER_DB" ".databases"
+        if [[ $? -ne 0 ]]; then
+            echo "Error: Unable to create database file at $USER_DB"
+            exit 1
+        fi
+    fi
+
+    # Create the users table
+    sqlite3 "$USER_DB" <<EOF
 CREATE TABLE IF NOT EXISTS users (
     username TEXT PRIMARY KEY,
     password TEXT NOT NULL
 );
 EOF
+
+    # Check if the table 'users' was created successfully
+    table_exists=$(sqlite3 "$USER_DB" "SELECT name FROM sqlite_master WHERE type='table' AND name='users';")
+    if [[ "$table_exists" == "users" ]]; then
+        echo "Database setup completed successfully. Table 'users' exists."
+    else
+        echo "Error: Table 'users' was not created successfully."
+        # Show the database schema for debugging
+        echo "Current database schema:"
+        sqlite3 "$USER_DB" ".schema"
+        exit 1
     fi
 }
+
+
+
+
 
 # Additional setup functions...
 
 fetch_users() {
-    sqlite3 $USER_DB "SELECT username || ':' || password FROM users"
+    DB_PATH="/etc/hysteria/udpusers.db"
+    if [[ -f "$DB_PATH" ]]; then
+        sqlite3 "$DB_PATH" "SELECT username || ':' || password FROM users;"
+    fi
 }
+
 
 perform_install_hysteria_binary() {
     if [[ -n "$LOCAL_FILE" ]]; then
@@ -791,6 +830,7 @@ main() {
     check_hysteria_homedir "/var/lib/$HYSTERIA_USER"
     case "$OPERATION" in
         "install")
+            setup_db
             perform_install
             ;;
         "remove")
