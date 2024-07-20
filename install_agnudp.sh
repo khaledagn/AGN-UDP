@@ -24,8 +24,7 @@ UDP_PORT=":36712"
 # OBFS
 OBFS="agnudp"
 
-# PASSWORDS
-PASSWORD="agnudp"
+
 
 # Basename of this script
 SCRIPT_NAME="$(basename "$0")"
@@ -51,6 +50,19 @@ API_BASE_URL="https://api.github.com/repos/apernet/hysteria"
 # export ALL_PROXY=socks5h://192.0.2.1:1080
 CURL_FLAGS=(-L -f -q --retry 5 --retry-delay 10 --retry-max-time 60)
 
+DB_PATH="/etc/hysteria/udpusers.db"
+
+# Create database and table
+setup_db() {
+    echo "Setting up database"
+    DB_PATH="/etc/hysteria/udpusers.db"
+    sqlite3 $DB_PATH <<EOF
+CREATE TABLE IF NOT EXISTS users (
+    username TEXT PRIMARY KEY,
+    password TEXT NOT NULL
+);
+EOF
+}
 
 ###
 # AUTO DETECTED GLOBAL VARIABLE
@@ -666,10 +678,12 @@ tpl_hysteria_server_x_service() {
 
 # /etc/hysteria/config.json
 tpl_etc_hysteria_config_json() {
-  cat << EOF
+    local users=$(fetch_users | tr '\n' ',' | sed 's/,$//')
+    
+    cat << EOF
 {
   "server": "vpn.khaledagn.com",
-   "listen": "$UDP_PORT",
+  "listen": "$UDP_PORT",
   "protocol": "$PROTOCOL",
   "cert": "/etc/hysteria/hysteria.server.crt",
   "key": "/etc/hysteria/hysteria.server.key",
@@ -680,12 +694,13 @@ tpl_etc_hysteria_config_json() {
   "disable_udp": false,
   "obfs": "$OBFS",
   "auth": {
-	"mode": "passwords",
-	"config": ["$PASSWORD"]
-         }
+    "mode": "passwords",
+    "config": [${users}]
+  }
 }
 EOF
 }
+
 
 
 ###
@@ -954,6 +969,25 @@ start_services() {
 	systemctl start hysteria-server.service	
 }
 
+install_software() {
+    local _package_name="$1"
+
+    if ! detect_package_manager; then
+        error "Supported package manager is not detected, please install the following package manually:"
+        echo
+        echo -e "\t* $_package_name"
+        echo
+        exit 65
+    fi
+
+    echo "Installing missing dependency '$_package_name' with '$PACKAGE_MANAGEMENT_INSTALL' ... "
+    if $PACKAGE_MANAGEMENT_INSTALL "$_package_name"; then
+        echo "ok"
+    else
+        error "Cannot install '$_package_name' with detected package manager, please install it manually."
+        exit 65
+    fi
+}
 
 
 main() {
@@ -962,18 +996,24 @@ parse_arguments "$@"
 	check_environment
 	check_hysteria_user "hysteria"
 	check_hysteria_homedir "/var/lib/$HYSTERIA_USER"
+        install_software "curl"
+        install_software "grep"
+        install_software "iptables-persistent"
+        install_software "sqlite3"
+        install_software "python3-pip"
+        pip3 install flask
 	case "$OPERATION" in
-	"install")
-	perform_install
-	;;
-	"remove")
-	perform_remove
-	;;
-	 
-	*)
-	error "Unknown operation '$OPERATION'."
-	;;
-	esac
+        "install")
+            perform_install
+            setup_db
+            ;;
+        "remove")
+            perform_remove
+            ;;
+        *)
+            error "Unknown operation '$OPERATION'."
+            ;;
+        esac
 }
 
 main "$@"
