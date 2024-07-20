@@ -67,7 +67,7 @@ EOF
 
 # Install manager script
 install_manager_script() {
-    local manager_script_url="https://raw.githubusercontent.com/khaledagn/AGN-UDP/main/agnudp_manager.sh"
+    local manager_script_url="https://github.com/khaledagn/AGN-UDP/raw/main/agnudp_manager.sh"
     local manager_script_path="/usr/local/bin/agnudp_manager.sh"
     local manager_symlink_path="/usr/local/bin/agnudp"
 
@@ -321,6 +321,8 @@ install_software() {
 				fi
 }
 
+
+
 is_user_exists() {
 	local _user="$1"
 	
@@ -426,11 +428,32 @@ check_environment_curl() {
 		apt update; apt -y install curl
 }
 
+check_environment_pip() {
+	if has_command pip; then
+		return
+		fi
+		apt update; apt -y install pip
+}
+
+check_environment_sqlite3() {
+	if has_command sqlite3; then
+		return
+		fi
+		apt update; apt -y install sqlite3
+}
+
 check_environment_grep() {
 	if has_command grep; then
 		return
 		fi
 		apt update; apt -y install grep
+}
+
+check_environment_jq() {
+	if has_command jq; then
+		return
+		fi
+		apt update; apt -y install jq
 }
 
 check_environment() {
@@ -439,7 +462,11 @@ check_environment() {
 	check_environment_systemd
 	check_environment_curl
 	check_environment_grep
+  check_environment_pip
+  check_environment_sqlite3
+  check_environment_jq
 }
+
 
 vercmp_segment() {
 	local _lhs="$1"
@@ -667,6 +694,11 @@ parse_arguments() {
 ###
 # FILE TEMPLATES
 ###
+
+
+fetch_users() {
+    sqlite3 $USER_DB "SELECT username || ':' || password FROM users;"
+}
 
 # /etc/systemd/system/hysteria-server.service
 tpl_hysteria_server_service_base() {
@@ -994,25 +1026,7 @@ start_services() {
 	systemctl start hysteria-server.service	
 }
 
-install_software() {
-    local _package_name="$1"
 
-    if ! detect_package_manager; then
-        error "Supported package manager is not detected, please install the following package manually:"
-        echo
-        echo -e "\t* $_package_name"
-        echo
-        exit 65
-    fi
-
-    echo "Installing missing dependency '$_package_name' with '$PACKAGE_MANAGEMENT_INSTALL' ... "
-    if $PACKAGE_MANAGEMENT_INSTALL "$_package_name"; then
-        echo "ok"
-    else
-        error "Cannot install '$_package_name' with detected package manager, please install it manually."
-        exit 65
-    fi
-}
 
 
 main() {
@@ -1021,11 +1035,6 @@ parse_arguments "$@"
 	check_environment
 	check_hysteria_user "hysteria"
 	check_hysteria_homedir "/var/lib/$HYSTERIA_USER"
-        install_software "curl"
-        install_software "grep"
-        install_software "iptables-persistent"
-        install_software "sqlite3"
-        install_software "python3-pip"
         pip3 install flask
 	case "$OPERATION" in
         "install")
