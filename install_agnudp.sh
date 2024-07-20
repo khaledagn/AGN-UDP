@@ -41,6 +41,7 @@ SYSTEMD_SERVICES_DIR="/etc/systemd/system"
 # Directory to store hysteria config file
 CONFIG_DIR="/etc/hysteria"
 
+ 
 # URLs of GitHub
 REPO_URL="https://github.com/apernet/hysteria"
 API_BASE_URL="https://api.github.com/repos/apernet/hysteria"
@@ -63,6 +64,28 @@ CREATE TABLE IF NOT EXISTS users (
 );
 EOF
 }
+
+# Install manager script
+install_manager_script() {
+    local manager_script_url="https://raw.githubusercontent.com/khaledagn/AGN-UDP/main/agnudp_manager.sh"
+    local manager_script_path="/usr/local/bin/agnudp_manager.sh"
+    local manager_symlink_path="/usr/local/bin/agnudp"
+
+    # Download the manager script
+    echo "Downloading AGNUDP Manager script..."
+    if ! curl -L -o "$manager_script_path" "$manager_script_url"; then
+        echo "Failed to download AGNUDP Manager script."
+        exit 1
+    fi
+
+    # Make the script executable
+    chmod +x "$manager_script_path"
+
+    # Create a symbolic link
+    ln -sf "$manager_script_path" "$manager_symlink_path"
+
+}
+
 
 ###
 # AUTO DETECTED GLOBAL VARIABLE
@@ -888,6 +911,7 @@ perform_install() {
 						perform_install_hysteria_systemd
 						setup_ssl
 					    start_services
+						install_manager_script
 						if [[ -n "$_is_frash_install" ]]; then
 							echo
 							echo -e "$(tbold)Congratulation! AGN-UDP has been successfully installed on your server.$(treset)"
@@ -906,6 +930,7 @@ perform_install() {
 								start_services
 								echo
 								echo -e "$(tbold)AGN-UDP has been successfully update to $VERSION.$(treset)"
+								echo "AGNUDP Manager installed successfully. Use 'agnudp' command to access the manager."
 								echo
 								fi
 }
