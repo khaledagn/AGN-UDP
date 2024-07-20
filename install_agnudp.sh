@@ -162,35 +162,26 @@ exec_sudo() {
 }
 
 detect_package_manager() {
-    if [[ -n "$PACKAGE_MANAGEMENT_INSTALL" ]]; then
+    if has_command apt-get; then
+        PACKAGE_MANAGEMENT_INSTALL='apt-get update && apt-get -y install'
         return 0
     fi
-
-    if has_command apt; then
-        PACKAGE_MANAGEMENT_INSTALL='apt update && apt -y install'
-        return 0
-    fi
-
     if has_command dnf; then
         PACKAGE_MANAGEMENT_INSTALL='dnf check-update && dnf -y install'
         return 0
     fi
-
     if has_command yum; then
         PACKAGE_MANAGEMENT_INSTALL='yum update && yum -y install'
         return 0
     fi
-
     if has_command zypper; then
         PACKAGE_MANAGEMENT_INSTALL='zypper update && zypper install -y --no-recommends'
         return 0
     fi
-
     if has_command pacman; then
         PACKAGE_MANAGEMENT_INSTALL='pacman -Syu && pacman -Syu --noconfirm'
         return 0
     fi
-
     return 1
 }
 
@@ -444,7 +435,7 @@ check_environment_pip() {
 	if has_command pip; then
 		return
 		fi
-		apt update; apt -y install pip
+        install_software "pip"
 }
 
 
@@ -452,7 +443,7 @@ check_environment_jq() {
 	if has_command jq; then
 		return
 		fi
-		apt update; apt -y install jq
+        install_software "jq"
 }
 
 check_environment() {
