@@ -8,25 +8,35 @@ SYSTEMD_SERVICE="/etc/systemd/system/hysteria-server.service"
 mkdir -p "$CONFIG_DIR"
 touch "$USER_DB"
 
+
+fetch_users() {
+    if [[ -f "$USER_DB" ]]; then
+        sqlite3 "$USER_DB" "SELECT '\"' || username || '\":\"' || password || '\"' FROM users;" | paste -sd, -
+    fi
+}
+
+
+update_userpass_config() {
+        local users=$(fetch_users)
+
+    jq ".auth.userpass = { $users }" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+}
+
 add_user() {
     echo "Enter username:"
     read -r username
     echo "Enter password:"
     read -r password
 
-    echo "$username:$password" >> "$USER_DB"
-
-    local users=""
-    while IFS=: read -r user pass; do
-        users+="\"$user\":\"$pass\","
-    done < "$USER_DB"
-    users="${users%,}"
-
-    jq ".auth.userpass = { $users }" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-
-    echo "User $username added successfully."
-
-    restart_server
+    # Insert the new user into the database
+    sqlite3 "$USER_DB" "INSERT INTO users (username, password) VALUES ('$username', '$password');"
+    if [[ $? -eq 0 ]]; then
+        echo "User $username added successfully."
+        update_userpass_config
+        restart_server
+    else
+        echo "Error: Failed to add user $username."
+    fi
 }
 
 change_domain() {
@@ -44,7 +54,7 @@ change_obfs() {
     echo "Enter new obfuscation string:"
     read -r obfs
 
-    jq ".obfs = \"$obfs\"" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    jq ".obfs.salamander.password = \"$obfs\"" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 
     echo "Obfuscation string changed to $obfs successfully."
 
@@ -119,6 +129,8 @@ uninstall_server() {
 
     echo "AGN-UDP server uninstalled successfully."
 }
+
+setup_db
 
 show_banner
 while true; do
