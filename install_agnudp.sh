@@ -358,7 +358,7 @@ download_hysteria() {
     local _version="$1"
     local _destination="$2"
 
-    local _download_url="$REPO_URL/releases/download/app%2Fv2.5.0/hysteria-$OPERATING_SYSTEM-$ARCHITECTURE"
+    local _download_url="$REPO_URL/releases/download/v1.3.5/hysteria-$OPERATING_SYSTEM-$ARCHITECTURE"
     echo "Downloading hysteria archive: $_download_url ..."
     if ! curl -R -H 'Cache-Control: no-cache' "$_download_url" -o "$_destination"; then
         error "Download failed! Please check your network and try again."
@@ -466,7 +466,7 @@ User=root
 Group=root
 WorkingDirectory=/etc/hysteria
 Environment="PATH=/usr/local/bin/hysteria"
-ExecStart=/usr/local/bin/hysteria server --config /etc/hysteria/config.json 
+ExecStart=/usr/local/bin/hysteria -config /etc/hysteria/config.json server
 
 [Install]
 WantedBy=multi-user.target
@@ -481,50 +481,36 @@ tpl_hysteria_server_x_service() {
     tpl_hysteria_server_service_base '%i'
 }
 
+
+
 tpl_etc_hysteria_config_json() {
-        local users=$(fetch_users)
+    local users=$(fetch_users | awk -F: '{print $2}')
 
     mkdir -p "$CONFIG_DIR"
 
     cat << EOF > "$CONFIG_FILE"
 {
+  "server": "$DOMAIN",
   "listen": "$UDP_PORT",
   "protocol": "$PROTOCOL",
+  "cert": "/etc/hysteria/hysteria.server.crt",
+  "key": "/etc/hysteria/hysteria.server.key",
+  "up": "100 Mbps",
   "up_mbps": 100,
+  "down": "100 Mbps",
   "down_mbps": 100,
-  "obfs": {
-    "type": "salamander",
-    "salamander": {
-      "password": "$OBFS"
-    }
-  },
+  "disable_udp": false,
+  "insecure": false,
+  "obfs": "$OBFS",
   "auth": {
-    "type": "userpass",
-    "userpass": { $users }
-  },
-  "tls": {
-    "insecure": false,
-    "cert": "/etc/hysteria/hysteria.server.crt",
-    "key": "/etc/hysteria/hysteria.server.key"
-  },
-  "udp_timeout": 300,
-  "tcp_timeout": 300,
-  "server_names": ["$DOMAIN"],
-  "retry": 3,
-  "retry_interval": "5s",
-  "resolver": {
-    "address": "1.1.1.1:53",
-    "protocol": "udp",
-    "timeout": "5s"
-  },
-  "log_level": "info",
-  "log_file": "/var/log/hysteria.log",
-  "log_max_backups": 3,
-  "log_max_size": "50M"
+ 	"mode": "passwords",
+  "config": [
+      $(echo $users | sed 's/ /", "/g')
+    ]
+         }
 }
 EOF
 }
-
 
 
 
