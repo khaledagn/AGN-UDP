@@ -466,7 +466,7 @@ User=root
 Group=root
 WorkingDirectory=/etc/hysteria
 Environment="PATH=/usr/local/bin/hysteria"
-ExecStart=/usr/local/bin/hysteria -config /etc/hysteria/config.json server
+ExecStart=/usr/local/bin/hysteria server --config /etc/hysteria/config.json 
 
 [Install]
 WantedBy=multi-user.target
@@ -503,13 +503,13 @@ tpl_etc_hysteria_config_json() {
     "userpass": { $users }
   },
   "tls": {
+    "insecure": false,
     "cert": "/etc/hysteria/hysteria.server.crt",
     "key": "/etc/hysteria/hysteria.server.key"
   },
   "udp_timeout": 300,
   "tcp_timeout": 300,
   "server_names": ["$DOMAIN"],
-  "insecure": false,
   "retry": 3,
   "retry_interval": "5s",
   "resolver": {
