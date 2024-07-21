@@ -128,8 +128,6 @@ uninstall_server() {
     echo "AGN-UDP server uninstalled successfully."
 }
 
-setup_db
-
 show_banner
 while true; do
     show_menu
