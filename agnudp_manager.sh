@@ -8,18 +8,15 @@ SYSTEMD_SERVICE="/etc/systemd/system/hysteria-server.service"
 mkdir -p "$CONFIG_DIR"
 touch "$USER_DB"
 
-
 fetch_users() {
     if [[ -f "$USER_DB" ]]; then
-        sqlite3 "$USER_DB" "SELECT '\"' || username || '\":\"' || password || '\"' FROM users;" | paste -sd, -
+        sqlite3 "$USER_DB" "SELECT password FROM users;" | paste -sd, -
     fi
 }
 
-
 update_userpass_config() {
-        local users=$(fetch_users)
-
-    jq ".auth.userpass = { $users }" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    local users=$(fetch_users | sed 's/,/","/g')
+    jq ".auth.passwords = [\"$users\"]" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 }
 
 add_user() {
@@ -39,11 +36,48 @@ add_user() {
     fi
 }
 
+edit_user() {
+    echo "Enter username to edit:"
+    read -r username
+    echo "Enter new password:"
+    read -r password
+
+    # Update the user in the database
+    sqlite3 "$USER_DB" "UPDATE users SET password = '$password' WHERE username = '$username';"
+    if [[ $? -eq 0 ]]; then
+        echo "User $username updated successfully."
+        update_userpass_config
+        restart_server
+    else
+        echo "Error: Failed to update user $username."
+    fi
+}
+
+delete_user() {
+    echo "Enter username to delete:"
+    read -r username
+
+    # Delete the user from the database
+    sqlite3 "$USER_DB" "DELETE FROM users WHERE username = '$username';"
+    if [[ $? -eq 0 ]]; then
+        echo "User $username deleted successfully."
+        update_userpass_config
+        restart_server
+    else
+        echo "Error: Failed to delete user $username."
+    fi
+}
+
+show_users() {
+    echo "Current users:"
+    sqlite3 "$USER_DB" "SELECT username FROM users;"
+}
+
 change_domain() {
     echo "Enter new domain:"
     read -r domain
 
-    jq ".server_names = \"$domain\"" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    jq ".server = \"$domain\"" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 
     echo "Domain changed to $domain successfully."
 
@@ -54,7 +88,7 @@ change_obfs() {
     echo "Enter new obfuscation string:"
     read -r obfs
 
-    jq ".obfs.salamander.password = \"$obfs\"" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    jq ".obfs.password = \"$obfs\"" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 
     echo "Obfuscation string changed to $obfs successfully."
 
@@ -66,6 +100,7 @@ change_up_speed() {
     read -r up_speed
 
     jq ".up_mbps = $up_speed" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    jq ".up = $up_speed Mbps" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 
     echo "Upload speed changed to $up_speed Mbps successfully."
 
@@ -77,6 +112,7 @@ change_down_speed() {
     read -r down_speed
 
     jq ".down_mbps = $down_speed" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    jq ".down = $down_speed Mbps" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 
     echo "Download speed changed to $down_speed Mbps successfully."
 
@@ -88,13 +124,16 @@ show_menu() {
     echo " AGNUDP Manager"
     echo "----------------------------"
     echo "1. Add new user"
-    echo "2. Change domain"
-    echo "3. Change obfuscation string"
-    echo "4. Change upload speed"
-    echo "5. Change download speed"
-    echo "6. Restart server"
-    echo "7. Uninstall server"
-    echo "8. Exit"
+    echo "2. Edit user password"
+    echo "3. Delete user"
+    echo "4. Show users"
+    echo "5. Change domain"
+    echo "6. Change obfuscation string"
+    echo "7. Change upload speed"
+    echo "8. Change download speed"
+    echo "9. Restart server"
+    echo "10. Uninstall server"
+    echo "11. Exit"
     echo "----------------------------"
     echo "Enter your choice: "
 }
@@ -138,25 +177,34 @@ while true; do
             add_user
             ;;
         2)
-            change_domain
+            edit_user
             ;;
         3)
-            change_obfs
+            delete_user
             ;;
         4)
-            change_up_speed
+            show_users
             ;;
         5)
-            change_down_speed
+            change_domain
             ;;
         6)
-            restart_server
+            change_obfs
             ;;
         7)
+            change_up_speed
+            ;;
+        8)
+            change_down_speed
+            ;;
+        9)
+            restart_server
+            ;;
+        10)
             uninstall_server
             exit 0
             ;;
-        8)
+        11)
             exit 0
             ;;
         *)
