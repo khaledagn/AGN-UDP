@@ -161,47 +161,26 @@ exec_sudo() {
     "$@"
 }
 
-detect_package_manager() {
-    if has_command apt-get; then
-        PACKAGE_MANAGEMENT_INSTALL='apt-get update && apt-get -y install'
-        return 0
-    fi
-    if has_command dnf; then
-        PACKAGE_MANAGEMENT_INSTALL='dnf check-update && dnf -y install'
-        return 0
-    fi
-    if has_command yum; then
-        PACKAGE_MANAGEMENT_INSTALL='yum update && yum -y install'
-        return 0
-    fi
-    if has_command zypper; then
-        PACKAGE_MANAGEMENT_INSTALL='zypper update && zypper install -y --no-recommends'
-        return 0
-    fi
-    if has_command pacman; then
-        PACKAGE_MANAGEMENT_INSTALL='pacman -Syu && pacman -Syu --noconfirm'
-        return 0
-    fi
-    return 1
-}
-
 install_software() {
-    local _package_name="$1"
-
-    if ! detect_package_manager; then
-        error "Supported package manager is not detected, please install the following package manually:"
-        echo
-        echo -e "\t* $_package_name"
-        echo
-        exit 65
-    fi
-
-    echo "Installing missing dependency '$_package_name' with '$PACKAGE_MANAGEMENT_INSTALL' ... "
-    if $PACKAGE_MANAGEMENT_INSTALL "$_package_name"; then
-        echo "ok"
+    local package="$1"
+    if has_command apt-get; then
+        echo "Installing $package using apt-get..."
+        apt-get update && apt-get install -y "$package"
+    elif has_command dnf; then
+        echo "Installing $package using dnf..."
+        dnf install -y "$package"
+    elif has_command yum; then
+        echo "Installing $package using yum..."
+        yum install -y "$package"
+    elif has_command zypper; then
+        echo "Installing $package using zypper..."
+        zypper install -y "$package"
+    elif has_command pacman; then
+        echo "Installing $package using pacman..."
+        pacman -Sy --noconfirm "$package"
     else
-        error "Cannot install '$_package_name' with detected package manager, please install it manually."
-        exit 65
+        echo "Error: No supported package manager found. Please install $package manually."
+        exit 1
     fi
 }
 
@@ -302,115 +281,109 @@ check_environment_systemd() {
     esac
 }
 
-
 parse_arguments() {
-	while [[ "$#" -gt '0' ]]; do
-		case "$1" in
-		'--remove')
-		if [[ -n "$OPERATION" && "$OPERATION" != 'remove' ]]; then
-			show_argument_error_and_exit "Option '--remove' is conflicted with other options."
-			fi
-			OPERATION='remove'
-			;;
-		'--version')
-		VERSION="$2"
-		if [[ -z "$VERSION" ]]; then
-			show_argument_error_and_exit "Please specify the version for option '--version'."
-			fi
-			shift
-			if ! has_prefix "$VERSION" 'v'; then
-				show_argument_error_and_exit "Version numbers should begin with 'v' (such like 'v1.3.1'), got '$VERSION'"
-				fi
-				;;
-			 
-			'-h' | '--help')
-			show_usage_and_exit
-			;;
-			'-l' | '--local')
-			LOCAL_FILE="$2"
-			if [[ -z "$LOCAL_FILE" ]]; then
-				show_argument_error_and_exit "Please specify the local binary to install for option '-l' or '--local'."
-				fi
-				break
-				;;
-			*)
-			show_argument_error_and_exit "Unknown option '$1'"
-			;;
-			esac
-			shift
-			done
-			
-			if [[ -z "$OPERATION" ]]; then
-				OPERATION='install'
-				fi
-				
-				# validate arguments
-				case "$OPERATION" in
-				'install')
-				if [[ -n "$VERSION" && -n "$LOCAL_FILE" ]]; then
-					show_argument_error_and_exit '--version and --local cannot be specified together.'
-					fi
-					;;
-				*)
-				if [[ -n "$VERSION" ]]; then
-					show_argument_error_and_exit "--version is only avaiable when install."
-					fi
-					if [[ -n "$LOCAL_FILE" ]]; then
-						show_argument_error_and_exit "--local is only avaiable when install."
-						fi
-						;;
-					esac
+    while [[ "$#" -gt '0' ]]; do
+        case "$1" in
+            '--remove')
+                if [[ -n "$OPERATION" && "$OPERATION" != 'remove' ]]; then
+                    show_argument_error_and_exit "Option '--remove' is conflicted with other options."
+                fi
+                OPERATION='remove'
+                ;;
+            '--version')
+                VERSION="$2"
+                if [[ -z "$VERSION" ]]; then
+                    show_argument_error_and_exit "Please specify the version for option '--version'."
+                fi
+                shift
+                if ! [[ "$VERSION" == v* ]]; then
+                    show_argument_error_and_exit "Version numbers should begin with 'v' (such like 'v1.3.1'), got '$VERSION'"
+                fi
+                ;;
+            '-h' | '--help')
+                show_usage_and_exit
+                ;;
+            '-l' | '--local')
+                LOCAL_FILE="$2"
+                if [[ -z "$LOCAL_FILE" ]]; then
+                    show_argument_error_and_exit "Please specify the local binary to install for option '-l' or '--local'."
+                fi
+                break
+                ;;
+            *)
+                show_argument_error_and_exit "Unknown option '$1'"
+                ;;
+        esac
+        shift
+    done
+
+    if [[ -z "$OPERATION" ]]; then
+        OPERATION='install'
+    fi
+
+    # validate arguments
+    case "$OPERATION" in
+        'install')
+            if [[ -n "$VERSION" && -n "$LOCAL_FILE" ]]; then
+                show_argument_error_and_exit '--version and --local cannot be specified together.'
+            fi
+            ;;
+        *)
+            if [[ -n "$VERSION" ]]; then
+                show_argument_error_and_exit "--version is only available when installing."
+            fi
+            if [[ -n "$LOCAL_FILE" ]]; then
+                show_argument_error_and_exit "--local is only available when installing."
+            fi
+            ;;
+    esac
 }
 
-
 check_hysteria_homedir() {
-	local _default_hysteria_homedir="$1"
-	
-	if [[ -n "$HYSTERIA_HOME_DIR" ]]; then
-		return
-		fi
-		
-		if ! is_user_exists "$HYSTERIA_USER"; then
-			HYSTERIA_HOME_DIR="$_default_hysteria_homedir"
-			return
-			fi
-			
-			HYSTERIA_HOME_DIR="$(eval echo ~"$HYSTERIA_USER")"
+    local _default_hysteria_homedir="$1"
+
+    if [[ -n "$HYSTERIA_HOME_DIR" ]]; then
+        return
+    fi
+
+    if ! is_user_exists "$HYSTERIA_USER"; then
+        HYSTERIA_HOME_DIR="$_default_hysteria_homedir"
+        return
+    fi
+
+    HYSTERIA_HOME_DIR="$(eval echo ~"$HYSTERIA_USER")"
 }
 
 download_hysteria() {
-	local _version="$1"
-	local _destination="$2"
-	
-	local _download_url="$REPO_URL/releases/download/v1.3.5/hysteria-$OPERATING_SYSTEM-$ARCHITECTURE"
-	echo "Downloading hysteria archive: $_download_url ..."
-	if ! curl -R -H 'Cache-Control: no-cache' "$_download_url" -o "$_destination"; then
-		error "Download failed! Please check your network and try again."
-		return 11
-		fi
-		return 0
+    local _version="$1"
+    local _destination="$2"
+
+    local _download_url="$REPO_URL/releases/download/app%2Fv2.5.0/hysteria-$OPERATING_SYSTEM-$ARCHITECTURE"
+    echo "Downloading hysteria archive: $_download_url ..."
+    if ! curl -R -H 'Cache-Control: no-cache' "$_download_url" -o "$_destination"; then
+        error "Download failed! Please check your network and try again."
+        return 11
+    fi
+    return 0
 }
 
- 
-
-
 check_hysteria_user() {
-	local _default_hysteria_user="$1"
-	
-	if [[ -n "$HYSTERIA_USER" ]]; then
-		return
-		fi
-		
-		if [[ ! -e "$SYSTEMD_SERVICES_DIR/hysteria-server.service" ]]; then
-			HYSTERIA_USER="$_default_hysteria_user"
-			return
-			fi
-			
-			HYSTERIA_USER="$(grep -o '^User=\w*' "$SYSTEMD_SERVICES_DIR/hysteria-server.service" | tail -1 | cut -d '=' -f 2 || true)"
-			
-			if [[ -z "$HYSTERIA_USER" ]]; then
-				HYSTERIA_USER="$_default_hysteria_user"
-				fi
+    local _default_hysteria_user="$1"
+
+    if [[ -n "$HYSTERIA_USER" ]]; then
+        return
+    fi
+
+    if [[ ! -e "$SYSTEMD_SERVICES_DIR/hysteria-server.service" ]]; then
+        HYSTERIA_USER="$_default_hysteria_user"
+        return
+    fi
+
+    HYSTERIA_USER="$(grep -o '^User=\w*' "$SYSTEMD_SERVICES_DIR/hysteria-server.service" | tail -1 | cut -d '=' -f 2 || true)"
+
+    if [[ -z "$HYSTERIA_USER" ]]; then
+        HYSTERIA_USER="$_default_hysteria_user"
+    fi
 }
 
 check_environment_curl() {
@@ -432,63 +405,58 @@ check_environment_sqlite3() {
 }
 
 check_environment_pip() {
-	if has_command pip; then
-		return
-		fi
+    if ! has_command pip; then
         install_software "pip"
+    fi
 }
 
-
 check_environment_jq() {
-	if has_command jq; then
-		return
-		fi
+    if ! has_command jq; then
         install_software "jq"
+    fi
 }
 
 check_environment() {
-	check_environment_operating_system
-	check_environment_architecture
-	check_environment_systemd
-	check_environment_curl
-	check_environment_grep
-  check_environment_pip
-  check_environment_sqlite3
-  check_environment_jq
+    check_environment_operating_system
+    check_environment_architecture
+    check_environment_systemd
+    check_environment_curl
+    check_environment_grep
+    check_environment_pip
+    check_environment_sqlite3
+    check_environment_jq
 }
 
 show_usage_and_exit() {
-	echo
-	echo -e "\t$(tbold)$SCRIPT_NAME$(treset) - AGN-UDP server install script"
-	echo
-	echo -e "Usage:"
-	echo
-	echo -e "$(tbold)Install AGN-UDP$(treset)"
-	echo -e "\t$0 [ -f | -l <file> | --version <version> ]"
-	echo -e "Flags:"
-	echo -e "\t-f, --force\tForce re-install latest or specified version even if it has been installed."
-	echo -e "\t-l, --local <file>\tInstall specified AGN-UDP binary instead of download it."
-	echo -e "\t--version <version>\tInstall specified version instead of the latest."
-	echo
-	echo -e "$(tbold)Remove AGN-UDP$(treset)"
-	echo -e "\t$0 --remove"
-	echo
-	echo -e "$(tbold)Check for the update$(treset)"
-	echo -e "\t$0 -c"
-	echo -e "\t$0 --check"
-	echo
-	echo -e "$(tbold)Show this help$(treset)"
-	echo -e "\t$0 -h"
-	echo -e "\t$0 --help"
-	exit 0
+    echo
+    echo -e "\t$(tbold)$SCRIPT_NAME$(treset) - AGN-UDP server install script"
+    echo
+    echo -e "Usage:"
+    echo
+    echo -e "$(tbold)Install AGN-UDP$(treset)"
+    echo -e "\t$0 [ -f | -l <file> | --version <version> ]"
+    echo -e "Flags:"
+    echo -e "\t-f, --force\tForce re-install latest or specified version even if it has been installed."
+    echo -e "\t-l, --local <file>\tInstall specified AGN-UDP binary instead of download it."
+    echo -e "\t--version <version>\tInstall specified version instead of the latest."
+    echo
+    echo -e "$(tbold)Remove AGN-UDP$(treset)"
+    echo -e "\t$0 --remove"
+    echo
+    echo -e "$(tbold)Check for the update$(treset)"
+    echo -e "\t$0 -c"
+    echo -e "\t$0 --check"
+    echo
+    echo -e "$(tbold)Show this help$(treset)"
+    echo -e "\t$0 -h"
+    echo -e "\t$0 --help"
+    exit 0
 }
 
-
-
 tpl_hysteria_server_service_base() {
-  local _config_name="$1"
+    local _config_name="$1"
 
-  cat << EOF
+    cat << EOF
 [Unit]
 Description=AGN-UDP Service
 After=network.target
@@ -506,41 +474,57 @@ EOF
 }
 
 tpl_hysteria_server_service() {
-  tpl_hysteria_server_service_base 'config'
+    tpl_hysteria_server_service_base 'config'
 }
 
-# /etc/systemd/system/hysteria-server@.service
 tpl_hysteria_server_x_service() {
-  tpl_hysteria_server_service_base '%i'
+    tpl_hysteria_server_service_base '%i'
 }
 
 tpl_etc_hysteria_config_json() {
-    local users=$(fetch_users | tr '\n' ',' | sed 's/,$//')
+        local users=$(fetch_users)
 
-    
     mkdir -p "$CONFIG_DIR"
 
-    
     cat << EOF > "$CONFIG_FILE"
 {
-  "server": "vpn.khaledagn.com",
   "listen": "$UDP_PORT",
   "protocol": "$PROTOCOL",
-  "cert": "/etc/hysteria/hysteria.server.crt",
-  "key": "/etc/hysteria/hysteria.server.key",
-  "up": "100 Mbps",
   "up_mbps": 100,
-  "down": "100 Mbps",
   "down_mbps": 100,
-  "disable_udp": false,
-  "obfs": "$OBFS",
+  "obfs": {
+    "type": "salamander",
+    "salamander": {
+      "password": "$OBFS"
+    }
+  },
   "auth": {
-    "mode": "userpass",
-    "config": [${users}]
-  }
+    "type": "userpass",
+    "userpass": { $users }
+  },
+  "tls": {
+    "cert": "/etc/hysteria/hysteria.server.crt",
+    "key": "/etc/hysteria/hysteria.server.key"
+  },
+  "udp_timeout": 300,
+  "tcp_timeout": 300,
+  "server_names": ["$DOMAIN"],
+  "insecure": false,
+  "retry": 3,
+  "retry_interval": "5s",
+  "resolver": {
+    "address": "1.1.1.1:53",
+    "protocol": "udp",
+    "timeout": "5s"
+  },
+  "log_level": "info",
+  "log_file": "/var/log/hysteria.log",
+  "log_max_backups": 3,
+  "log_max_size": "50M"
 }
 EOF
 }
+
 
 
 
@@ -569,6 +553,22 @@ EOF
     table_exists=$(sqlite3 "$USER_DB" "SELECT name FROM sqlite_master WHERE type='table' AND name='users';")
     if [[ "$table_exists" == "users" ]]; then
         echo "Database setup completed successfully. Table 'users' exists."
+        
+        # Add a default user if not already exists
+        default_username="default"
+        default_password="password"
+        user_exists=$(sqlite3 "$USER_DB" "SELECT username FROM users WHERE username='$default_username';")
+        
+        if [[ -z "$user_exists" ]]; then
+            sqlite3 "$USER_DB" "INSERT INTO users (username, password) VALUES ('$default_username', '$default_password');"
+            if [[ $? -eq 0 ]]; then
+                echo "Default user created successfully."
+            else
+                echo "Error: Failed to create default user."
+            fi
+        else
+            echo "Default user already exists."
+        fi
     else
         echo "Error: Table 'users' was not created successfully."
         # Show the database schema for debugging
@@ -578,16 +578,10 @@ EOF
     fi
 }
 
-
-
-
-
-# Additional setup functions...
-
 fetch_users() {
     DB_PATH="/etc/hysteria/udpusers.db"
     if [[ -f "$DB_PATH" ]]; then
-        sqlite3 "$DB_PATH" "SELECT username || ':' || password FROM users;"
+        sqlite3 "$DB_PATH" "SELECT '\"' || username || '\":\"' || password || '\"' FROM users;" | paste -sd, -
     fi
 }
 
@@ -630,7 +624,7 @@ perform_remove_hysteria_binary() {
 }
 
 perform_install_hysteria_example_config() {
-    install_content -Dm644 "$(tpl_etc_hysteria_config_json)" "$CONFIG_DIR/config.json"
+    tpl_etc_hysteria_config_json
 }
 
 perform_install_hysteria_systemd() {
@@ -661,62 +655,67 @@ perform_install_hysteria_home_legacy() {
 
 perform_install_manager_script() {
     local _manager_script="/usr/local/bin/agnudp_manager.sh"
+    local _symlink_path="/usr/local/bin/agnudp"
+    
+    echo "Downloading manager script..."
     curl -o "$_manager_script" "https://github.com/khaledagn/AGN-UDP/raw/main/agnudp_manager.sh"
     chmod +x "$_manager_script"
+    
+    echo "Creating symbolic link to run the manager script using 'agnudp' command..."
+    ln -sf "$_manager_script" "$_symlink_path"
+    
     echo "Manager script installed at $_manager_script"
+    echo "You can now run the manager using the 'agnudp' command."
 }
+
 
 is_hysteria_installed() {
-	# RETURN VALUE
-	# 0: hysteria is installed
-	# 1: hysteria is not installed
-	
-	if [[ -f "$EXECUTABLE_INSTALL_PATH" || -h "$EXECUTABLE_INSTALL_PATH" ]]; then
-		return 0
-		fi
-		return 1
+    # RETURN VALUE
+    # 0: hysteria is installed
+    # 1: hysteria is not installed
+    
+    if [[ -f "$EXECUTABLE_INSTALL_PATH" || -h "$EXECUTABLE_INSTALL_PATH" ]]; then
+        return 0
+    fi
+    return 1
 }
-
 
 get_running_services() {
-	if [[ "x$FORCE_NO_SYSTEMD" == "x2" ]]; then
-		return
-		fi
-		
-		systemctl list-units --state=active --plain --no-legend \
-		| grep -o "hysteria-server@*[^\s]*.service" || true
+    if [[ "x$FORCE_NO_SYSTEMD" == "x2" ]]; then
+        return
+    fi
+    
+    systemctl list-units --state=active --plain --no-legend \
+    | grep -o "hysteria-server@*[^\s]*.service" || true
 }
 
-
 restart_running_services() {
-	if [[ "x$FORCE_NO_SYSTEMD" == "x2" ]]; then
-		return
-		fi
-		
-		echo "Restarting running service ... "
-		
-		for service in $(get_running_services); do
-			echo -ne "Restarting $service ... "
-			systemctl restart "$service"
-			echo "done"
-			done
+    if [[ "x$FORCE_NO_SYSTEMD" == "x2" ]]; then
+        return
+    fi
+    
+    echo "Restarting running service ... "
+    
+    for service in $(get_running_services); do
+        echo -ne "Restarting $service ... "
+        systemctl restart "$service"
+        echo "done"
+    done
 }
 
 stop_running_services() {
-	if [[ "x$FORCE_NO_SYSTEMD" == "x2" ]]; then
-		return
-		fi
-		
-		echo "Stopping running service ... "
-		
-		for service in $(get_running_services); do
-			echo -ne "Stopping $service ... "
-			systemctl stop "$service"
-			echo "done"
-			done
+    if [[ "x$FORCE_NO_SYSTEMD" == "x2" ]]; then
+        return
+    fi
+    
+    echo "Stopping running service ... "
+    
+    for service in $(get_running_services); do
+        echo -ne "Stopping $service ... "
+        systemctl stop "$service"
+        echo "done"
+    done
 }
-
-
 
 perform_install() {
     local _is_fresh_install
@@ -734,7 +733,7 @@ perform_install() {
 
     if [[ -n "$_is_fresh_install" ]]; then
         echo
-        echo -e "$(tbold)Congratulation! AGN-UDP has been successfully installed on your server.$(treset)"
+        echo -e "$(tbold)Congratulations! AGN-UDP has been successfully installed on your server.$(treset)"
         echo "Use 'agnudp' command to access the manager."
 
         echo
@@ -762,7 +761,7 @@ perform_remove() {
     perform_remove_hysteria_systemd
 
     echo
-    echo -e "$(tbold)Congratulation! AGN-UDP has been successfully removed from your server.$(treset)"
+    echo -e "$(tbold)Congratulations! AGN-UDP has been successfully removed from your server.$(treset)"
     echo
     echo -e "You still need to remove configuration files and ACME certificates manually with the following commands:"
     echo
