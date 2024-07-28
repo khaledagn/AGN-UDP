@@ -466,7 +466,7 @@ User=root
 Group=root
 WorkingDirectory=/etc/hysteria
 Environment="PATH=/usr/local/bin/hysteria"
-ExecStart=/usr/local/bin/hysteria -config /etc/hysteria/config.json server
+ExecStart=/usr/local/bin/hysteria server --config /etc/hysteria/config.json
 
 [Install]
 WantedBy=multi-user.target
