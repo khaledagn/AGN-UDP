@@ -505,7 +505,7 @@ tpl_etc_hysteria_config_json() {
   "auth": {
  	"mode": "passwords",
   "config": [
-      $(echo $users | sed 's/ /", "/g')
+      "$(echo $local_users)"
     ]
          }
 }
@@ -571,7 +571,6 @@ fetch_users() {
         sqlite3 "$DB_PATH" "SELECT username || ':' || password FROM users;" | paste -sd, -
     fi
 }
-
 
 
 perform_install_hysteria_binary() {
