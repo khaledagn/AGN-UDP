@@ -8,14 +8,15 @@ SYSTEMD_SERVICE="/etc/systemd/system/hysteria-server.service"
 mkdir -p "$CONFIG_DIR"
 touch "$USER_DB"
 
+
 fetch_users() {
     if [[ -f "$USER_DB" ]]; then
-        sqlite3 "$USER_DB" "SELECT password FROM users;" | paste -sd, -
+        sqlite3 "$USER_DB" "SELECT username || ':' || password FROM users;" | paste -sd, -
     fi
 }
 
 update_userpass_config() {
-    local users=$(fetch_users | sed 's/,/","/g')
+    local users=$(fetch_users)
     jq ".auth.passwords = [\"$users\"]" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 }
 
