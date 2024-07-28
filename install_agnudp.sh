@@ -564,12 +564,14 @@ EOF
     fi
 }
 
+
 fetch_users() {
     DB_PATH="/etc/hysteria/udpusers.db"
     if [[ -f "$DB_PATH" ]]; then
-        sqlite3 "$DB_PATH" "SELECT '\"' || username || '\":\"' || password || '\"' FROM users;" | paste -sd, -
+        sqlite3 "$DB_PATH" "SELECT username || ':' || password FROM users;" | paste -sd, -
     fi
 }
+
 
 
 perform_install_hysteria_binary() {
