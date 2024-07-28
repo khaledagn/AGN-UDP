@@ -484,7 +484,7 @@ tpl_hysteria_server_x_service() {
 
 
 tpl_etc_hysteria_config_json() {
-    local users=$(fetch_users | awk -F: '{print $2}')
+    local_users=$(fetch_users)
 
     mkdir -p "$CONFIG_DIR"
 
