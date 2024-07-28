@@ -17,7 +17,7 @@ fetch_users() {
 
 update_userpass_config() {
     local users=$(fetch_users)
-    jq ".auth.config = [\"$users\"]" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    jq ".auth.config = [\"","$users\"]" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 }
 
 add_user() {
