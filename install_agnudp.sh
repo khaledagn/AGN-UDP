@@ -8,7 +8,7 @@
 set -e
 
 # Domain Name
-DOMAIN="vpn.khaledagn.com"
+DOMAIN="vpn.khaledagn.me"
 
 # PROTOCOL
 PROTOCOL="udp"
@@ -729,7 +729,7 @@ perform_install() {
         echo
         echo -e "Follow me!"
         echo
-        echo -e "\t+ Check out my website at $(tblue)https://www.khaledagn.com$(treset)"
+        echo -e "\t+ Check out my website at $(tblue)https://www.khaledagn.me$(treset)"
         echo -e "\t+ Follow me on Telegram: $(tblue)https://t.me/khaledagn$(treset)"
         echo -e "\t+ Follow me on Facebook: $(tblue)https://facebook.com/itskhaledagn$(treset)"
         echo
